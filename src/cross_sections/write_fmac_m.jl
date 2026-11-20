@@ -43,6 +43,11 @@ open(fmac_file,"w") do file
     is_opensn_csda = cross_sections.get_opensn_csda()
     v1[17] = is_opensn_csda ? 39 : 38                   # Number of parameters in Record II + 2
     v1[20] = cross_sections.get_legendre_order() + 1    # Legendre order + 1
+    # Width of the real fields (OpenSn CSDA extension). Zero means the standard 12-character
+    # fields with six significant digits. OpenSn CSDA libraries use 25-character fields with 17
+    # significant digits, which reproduce double-precision values exactly.
+    real_width = is_opensn_csda ? 25 : 12
+    v1[40] = is_opensn_csda ? real_width : 0
     print_int(file,v1)
 
     #----
@@ -113,7 +118,7 @@ open(fmac_file,"w") do file
         for i in range(1,Npart)
             append!(mesh_boundaries,cross_sections.get_energy_boundaries(particle_names[Npart-i+1])[end])
         end
-        print_float(file,mesh_boundaries)
+        print_float(file,mesh_boundaries,real_width)
     end
 
     #----
@@ -131,7 +136,7 @@ open(fmac_file,"w") do file
                 append!(total_cross_sections,tcs[g,n])
             end
         end
-        print_float(file,total_cross_sections)
+        print_float(file,total_cross_sections,real_width)
     end
 
     #----
@@ -155,7 +160,7 @@ open(fmac_file,"w") do file
                 append!(stopping_powers,sp[end,n])
             end
         end
-        print_float(file,stopping_powers)
+        print_float(file,stopping_powers,real_width)
     end
 
     #----
@@ -173,7 +178,7 @@ open(fmac_file,"w") do file
                 append!(momentum_transfer,mt[g,n])
             end
         end
-        print_float(file,momentum_transfer)
+        print_float(file,momentum_transfer,real_width)
     end
 
     #----
@@ -191,7 +196,7 @@ open(fmac_file,"w") do file
                 append!(energy_deposition,ed[g,n])
             end
         end
-        print_float(file,energy_deposition)
+        print_float(file,energy_deposition,real_width)
     end
 
     #----
@@ -209,7 +214,7 @@ open(fmac_file,"w") do file
                 append!(charge_deposition,cd[g,n])
             end
         end
-        print_float(file,charge_deposition)
+        print_float(file,charge_deposition,real_width)
     end
 
     #----
@@ -227,7 +232,7 @@ open(fmac_file,"w") do file
                 append!(group_stopping_powers,sp[g,n])
             end
         end
-        print_float(file,group_stopping_powers)
+        print_float(file,group_stopping_powers,real_width)
     end
 
     #----
@@ -272,7 +277,7 @@ open(fmac_file,"w") do file
                 append!(scat,dcs_ij[n,1:L_eff+1])
             end
         end
-        print_float(file,scat)
+        print_float(file,scat,real_width)
 
     end
 
@@ -381,6 +386,8 @@ Write a vector of real to the FMAC-M file.
 # Input Argument(s)
 - `file::IOStream` : file.
 - `v::Vector{Float64}` : real vector to write in the file.
+- `width::Int64=12` : width of each real field. The standard 12-character fields carry six
+  significant digits; 25-character fields carry 17 and are used by OpenSn CSDA libraries.
 
 # Output Argument(s)
 N/A
@@ -389,10 +396,16 @@ N/A
 N/A
 
 """
-function print_float(file::IOStream,v::Vector{Float64})
+function print_float(file::IOStream,v::Vector{Float64},width::Int64=12)
+    if width ∉ [12,25] error("Unsupported FMAC-M real field width $width.") end
     Nint = 0
     for i in range(1,length(v))
-        print_float(file,v[i])
+        if width == 12
+            print_float(file,v[i])
+        else
+            if ~isfinite(v[i]) error("Cannot write the non-finite value $(v[i]) to the FMAC-M file.") end
+            print(file,@sprintf("%25.16E",v[i]))
+        end
         Nint += 1
         if mod(Nint,6) == 0 println(file) end
     end

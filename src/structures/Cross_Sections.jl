@@ -203,7 +203,9 @@ itself. When enabled:
   catastrophic interactions. The continuous slowing-down contributions within each group and at
   the cutoff energy are excluded,
 - the FMAC-M file contains an additional record (Record III + 39) with the group-averaged
-  restricted stopping powers.
+  restricted stopping powers,
+- the FMAC-M file writes reals with 17 significant digits in 25-character fields, which reproduce
+  double-precision values exactly, and records that width as parameter 40 of Record II + 1.
 
 The `FP` scattering model is rejected in this mode. Radiant energy and charge deposition
 calculations cannot use a library produced in this mode.

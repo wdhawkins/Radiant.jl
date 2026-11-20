@@ -55,6 +55,7 @@ chargeDepositionCrossSections = Vector{Float64}()
 groupStoppingPowers_temp = Vector{Float64}()
 groupStoppingPowers = Vector{Float64}()
 is_opensn_csda = false
+realWidth = 12
 scatteringCrossSections = Vector{Float64}()
 
 P = []
@@ -104,6 +105,9 @@ elseif line_index >=7 && line_index <= 13
     numberOfMaterials = P[15]
     L_II2 = 13+ceil(Int64,P[17]/6)
     legendreOrder = P[20] - 1
+    # Width of the real fields (OpenSn CSDA extension). Zero means the standard 12 characters.
+    if P[40] != 0 realWidth = P[40] end
+    if realWidth ∉ [12,25] error("Unsupported FMAC-M real field width $realWidth.") end
     end
 
 # Record II + 2 : Lengths of records III
@@ -158,11 +162,11 @@ elseif record_III[index_III] == 3
 
 # Record III + 4 : Particle rest energies by particle types
 elseif record_III[index_III] == 4
-    index_III, index_III_line,restEnergies = read_Float!(index_III,index_III_line,L[4],line,restEnergies)
+    index_III, index_III_line,restEnergies = read_Float!(index_III,index_III_line,L[4],line,restEnergies,realWidth)
 
 # Record III + 5 : Energy mesh boundaries
 elseif record_III[index_III] == 5
-    index_III, index_III_line,energyBoundaries_temp = read_Float!(index_III,index_III_line,L[5],line,energyBoundaries_temp)
+    index_III, index_III_line,energyBoundaries_temp = read_Float!(index_III,index_III_line,L[5],line,energyBoundaries_temp,realWidth)
     # To put the values in order
     if index_III_line == 1
     for n in range(1,numberOfParticles), ig in range(1,numberOfGroups[n]+1)
@@ -178,7 +182,7 @@ elseif record_III[index_III] == 5
 
 # Record III + 6 : Group velocities
 elseif record_III[index_III] == 6
-    index_III, index_III_line,groupVelocities = read_Float!(index_III,index_III_line,L[6],line,groupVelocities)
+    index_III, index_III_line,groupVelocities = read_Float!(index_III,index_III_line,L[6],line,groupVelocities,realWidth)
 
 #Record III + 11 : Array that define the minimal group number from which a transition to group g is available
 elseif record_III[index_III] == 11
@@ -194,7 +198,7 @@ elseif record_III[index_III] == 14
 
 # Record III + 15 : Total cross sections
 elseif record_III[index_III] == 15
-    index_III, index_III_line,totalCrossSections_temp = read_Float!(index_III,index_III_line,L[15],line,totalCrossSections_temp)
+    index_III, index_III_line,totalCrossSections_temp = read_Float!(index_III,index_III_line,L[15],line,totalCrossSections_temp,realWidth)
     if index_III_line == 1
         for imat in range(1,numberOfMaterials)
             totalCrossSections[:,imat] = totalCrossSections_temp[imat:numberOfMaterials:end]
@@ -203,7 +207,7 @@ elseif record_III[index_III] == 15
 
 # Record III + 16 : Absorption cross sections
 elseif record_III[index_III] == 16
-    index_III, index_III_line,absorptionCrossSections_temp = read_Float!(index_III,index_III_line,L[16],line,absorptionCrossSections_temp)
+    index_III, index_III_line,absorptionCrossSections_temp = read_Float!(index_III,index_III_line,L[16],line,absorptionCrossSections_temp,realWidth)
     if index_III_line == 1
         for imat in range(1,numberOfMaterials)
             absorptionCrossSections[:,imat] = absorptionCrossSections_temp[imat:numberOfMaterials:end]
@@ -212,7 +216,7 @@ elseif record_III[index_III] == 16
 
 # Record III + 35 : Restricted stopping power 
 elseif record_III[index_III] == 35
-    index_III, index_III_line,stoppingPowers_temp = read_Float!(index_III,index_III_line,L[35],line,stoppingPowers_temp)
+    index_III, index_III_line,stoppingPowers_temp = read_Float!(index_III,index_III_line,L[35],line,stoppingPowers_temp,realWidth)
     # To put the values in order
     if index_III_line == 1
     for imat in range(1,numberOfMaterials)
@@ -230,7 +234,7 @@ elseif record_III[index_III] == 35
 
 # Record III + 36 : Restricted continuous scattering cross-sections
 elseif record_III[index_III] == 36
-    index_III, index_III_line,continuousScatteringCrossSections_temp = read_Float!(index_III,index_III_line,L[36],line,continuousScatteringCrossSections_temp)
+    index_III, index_III_line,continuousScatteringCrossSections_temp = read_Float!(index_III,index_III_line,L[36],line,continuousScatteringCrossSections_temp,realWidth)
     if index_III_line == 1
         for imat in range(1,numberOfMaterials)
             continuousScatteringCrossSections[:,imat] = continuousScatteringCrossSections_temp[imat:numberOfMaterials:end]
@@ -239,7 +243,7 @@ elseif record_III[index_III] == 36
 
 # Record III + 37 : Energy deposition cross-sections
 elseif record_III[index_III] == 37
-    index_III, index_III_line,energyDepositionCrossSections_temp = read_Float!(index_III,index_III_line,L[37],line,energyDepositionCrossSections_temp)
+    index_III, index_III_line,energyDepositionCrossSections_temp = read_Float!(index_III,index_III_line,L[37],line,energyDepositionCrossSections_temp,realWidth)
     if index_III_line == 1
         for imat in range(1,numberOfMaterials)
             energyDepositionCrossSections[:,imat] = energyDepositionCrossSections_temp[imat:numberOfMaterials:end]
@@ -248,7 +252,7 @@ elseif record_III[index_III] == 37
 
 # Record III + 38 : Charge deposition cross-sections
 elseif record_III[index_III] == 38
-    index_III, index_III_line,chargeDepositionCrossSections_temp = read_Float!(index_III,index_III_line,L[38],line,chargeDepositionCrossSections_temp)
+    index_III, index_III_line,chargeDepositionCrossSections_temp = read_Float!(index_III,index_III_line,L[38],line,chargeDepositionCrossSections_temp,realWidth)
     if index_III_line == 1
         for imat in range(1,numberOfMaterials)
             chargeDepositionCrossSections[:,imat] = chargeDepositionCrossSections_temp[imat:numberOfMaterials:end]
@@ -257,7 +261,7 @@ elseif record_III[index_III] == 38
 # Record III + 39 : Group-averaged restricted stopping powers (OpenSn CSDA extension)
 elseif record_III[index_III] == 39
     is_opensn_csda = true
-    index_III, index_III_line,groupStoppingPowers_temp = read_Float!(index_III,index_III_line,L[39],line,groupStoppingPowers_temp)
+    index_III, index_III_line,groupStoppingPowers_temp = read_Float!(index_III,index_III_line,L[39],line,groupStoppingPowers_temp,realWidth)
     if index_III_line == 1
         for imat in range(1,numberOfMaterials)
             groupStoppingPowers[:,imat] = groupStoppingPowers_temp[imat:numberOfMaterials:end]
@@ -288,7 +292,7 @@ else
         
     # Scattering cross sections
     else
-    index_III, index_III_line,scatteringCrossSections = read_Float!(index_III,index_III_line,legendreOrderScattering[3+numberOfMaterials],line,scatteringCrossSections)
+    index_III, index_III_line,scatteringCrossSections = read_Float!(index_III,index_III_line,legendreOrderScattering[3+numberOfMaterials],line,scatteringCrossSections,realWidth)
     if index_III_line == 1
         for imat in range(1,numberOfMaterials)
             pos1 = scatNDict[imat][legendreOrderScattering[2]][legendreOrderScattering[1]]
@@ -432,7 +436,7 @@ end
 
 """
     read_Float!(index_III::Int64,index_III_line::Int64,Li::Int64,line::String,
-    vector::Vector{Float64})
+    vector::Vector{Float64},width::Int64=12)
 
 Read sequential real values in FMAC-M file.
 
@@ -442,6 +446,8 @@ Read sequential real values in FMAC-M file.
 - `Li::Int64` : length of the data to be collected.
 - `line::String` : line content.
 - `vector::vector{Float64}` : vector that contain the real values.
+- `width::Int64=12` : width of the real fields. Standard 12-character fields are parsed by
+  position. Wider fields always start with a space, so they are separated by whitespace.
 
 # Output Argument(s)
 - `index_III::Int64` : index of the line in the FMAC-M file.
@@ -452,7 +458,8 @@ Read sequential real values in FMAC-M file.
 N/A
 
 """
-function read_Float!(index_III::Int64,index_III_line::Int64,Li::Int64,line::String,vector::Vector{Float64})
+function read_Float!(index_III::Int64,index_III_line::Int64,Li::Int64,line::String,vector::Vector{Float64},width::Int64=12)
+    if width != 12 return read_wide_Float!(index_III,index_III_line,Li,line,vector) end
     if string(line[1]) != "-" line = "+" * line end
     # Is it the last line of the record ?
     if ceil(Int,Li/6) == index_III_line
@@ -477,5 +484,41 @@ function read_Float!(index_III::Int64,index_III_line::Int64,Li::Int64,line::Stri
         append!(vector,mantissa * 10^expo)
         vector=Float64.(vector)
     end
+    return index_III,index_III_line,vector
+end
+
+"""
+    read_wide_Float!(index_III::Int64,index_III_line::Int64,Li::Int64,line::String,
+    vector::Vector{Float64})
+
+Read sequential real values written in wide (OpenSn CSDA extension) fields of the FMAC-M file.
+
+# Input Argument(s)
+- `index_III::Int64` : index of the line in the FMAC-M file.
+- `index_III_line::Int64` : index in the data to be collected.
+- `Li::Int64` : length of the data to be collected.
+- `line::String` : line content.
+- `vector::vector{Float64}` : vector that contain the real values.
+
+# Output Argument(s)
+- `index_III::Int64` : index of the line in the FMAC-M file.
+- `index_III_line::Int64` : index in the data to be collected.
+- `vector::vector{Float64}` : vector that contain the real values.
+
+# Reference(s)
+N/A
+
+"""
+function read_wide_Float!(index_III::Int64,index_III_line::Int64,Li::Int64,line::String,vector::Vector{Float64})
+    nlin = ceil(Int,Li/6) == index_III_line ? Li - 6*(index_III_line-1) : 6
+    if ceil(Int,Li/6) == index_III_line
+        index_III += 1
+        index_III_line = 1
+    else
+        index_III_line += 1
+    end
+    tokens = split(strip(line))
+    if length(tokens) != nlin error("Expected $nlin real values in the FMAC-M line, found $(length(tokens)).") end
+    append!(vector,parse.(Float64,tokens))
     return index_III,index_III_line,vector
 end

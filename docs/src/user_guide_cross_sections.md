@@ -189,7 +189,12 @@ In this mode Radiant:
 - excludes the continuous slowing-down contributions from the energy and charge deposition cross
   sections, within each group and at the cutoff energy,
 - writes the group-averaged restricted stopping powers in an additional FMAC-M record
-  (Record III + 39).
+  (Record III + 39),
+- writes reals with 17 significant digits in 25-character fields instead of six significant
+  digits in 12-character fields, and records that width as parameter 40 of Record II + 1. The
+  standard precision changes derived quantities: absorption obtained by subtracting the
+  scattering from the total cross section can lose about 1 cm⁻¹ when the total cross section is
+  of order 10⁵ cm⁻¹.
 
 The `FP` scattering model is rejected in this mode. Only the FMAC-M format is supported, and
 Radiant's own energy and charge deposition calculations refuse such a library. Reading the file
