@@ -2,19 +2,23 @@ using Radiant
 using Test
 import Radiant
 
-# Builds a small library: aluminum electrons, or copper electrons and photons, with 8 logarithmic
-# groups from 1 MeV to 10 keV and Legendre order 3.
-function small_library(is_opensn_csda::Bool; coupled::Bool=false, inelastic=Inelastic_Collision())
+# Builds a small library with 8 logarithmic groups down to 10 keV and Legendre order 3: aluminum
+# electrons, copper electrons and photons (`coupled`), or copper electrons, photons, and positrons
+# (`positrons`). The positron library stays below the pair-production threshold.
+function small_library(is_opensn_csda::Bool; coupled::Bool=false, positrons::Bool=false, inelastic=Inelastic_Collision())
+    coupled = coupled || positrons
     mat = coupled ? Material("Cu") : Material("Al")
     mat.add_element(coupled ? "Cu" : "Al")
     particles = coupled ? Radiant.Particle[Electron(),Photon()] : Radiant.Particle[Electron()]
+    if positrons push!(particles,Positron()) end
     interactions = Radiant.Interaction[inelastic,Elastic_Collision(),Bremsstrahlung()]
     if coupled append!(interactions,[Compton(),Photoelectric()]) end
+    if positrons push!(interactions,Annihilation()) end
     cs = Cross_Sections()
     cs.set_source("physics-models")
     cs.set_materials([mat])
     cs.set_particles(particles)
-    cs.set_group_structure("log",8,1.0,0.01)
+    cs.set_group_structure("log",8,positrons ? 0.5 : 1.0,0.01)
     cs.set_interactions(interactions)
     cs.set_legendre_order(3)
     cs.set_opensn_csda(is_opensn_csda)
@@ -73,8 +77,8 @@ end
 end
 
 @testset "Charge deposition conserves charge" begin
-    for coupled in (false,true)
-        cs,particles,_ = small_library(true;coupled=coupled)
+    for (coupled,positrons) in ((false,false),(true,false),(true,true))
+        cs,particles,_ = small_library(true;coupled=coupled,positrons=positrons)
         for p in particles
             @test charge_identity_error(cs,p,particles) < 1e-12
         end

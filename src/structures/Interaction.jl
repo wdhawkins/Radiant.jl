@@ -123,12 +123,10 @@ Get the charge deposited and extracted in the interaction.
 
 """
 function get_charge_variation(interaction::Interaction,type::String,charge_in::Real,charge_out::Real)
-    if typeof(interaction) == Annihilation
-        if type == "P_pp"
-            q_deposited = 0; q_extracted = 1/2
-        else
-            q_deposited = 1; q_extracted = 0
-        end
+    if typeof(interaction) == Annihilation && type == "P_pp"
+        # Each pair of photons comes from one positron created under the cutoff, which deposits
+        # one positive charge.
+        q_deposited = 0; q_extracted = 1/2
     elseif typeof(interaction) == Pair_Production
         q_deposited = 0; q_extracted = 0 # no electron extracted from medium in pair production
     else
