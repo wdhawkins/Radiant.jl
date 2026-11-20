@@ -28,6 +28,7 @@ Radiant.set_interactions(this::Radiant.Cross_Sections,interactions::Union{Vector
 Radiant.set_legendre_order(this::Radiant.Cross_Sections,legendre_order::Int64)
 Radiant.set_absorption(this::Radiant.Cross_Sections,Σa::Vector{Float64})
 Radiant.set_scattering(this::Radiant.Cross_Sections,Σs::Vector{Float64})
+Radiant.set_opensn_csda(this::Radiant.Cross_Sections,is_opensn_csda::Bool)
 ```
 
 ## Library Metadata Getters
@@ -45,6 +46,7 @@ Radiant.get_cutoff(this::Radiant.Cross_Sections)
 Radiant.get_legendre_order(this::Radiant.Cross_Sections)
 Radiant.get_group_structure(this::Radiant.Cross_Sections)
 Radiant.get_interactions(this::Radiant.Cross_Sections)
+Radiant.get_opensn_csda(this::Radiant.Cross_Sections)
 ```
 
 ## Per-Particle Energy Structure

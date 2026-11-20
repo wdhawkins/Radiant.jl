@@ -25,6 +25,7 @@ Npart = cross_sections.get_number_of_particles()
 materials = cross_sections.get_materials()
 particles = cross_sections.get_particles()
 interactions = cross_sections.get_interactions()
+is_opensn_csda = cross_sections.get_opensn_csda()
 ρ = zeros(Nmat)
 state_of_matter = Vector{String}()
 Z = Vector{Vector{Int64}}(undef,Nmat)
@@ -90,7 +91,7 @@ for i in range(1,Npart), n in range(1,Nmat)
                 if pin != get_type(particles[i]) || pout != get_type(particles[j]) continue end
                 for type in interaction.get_types(pin,pout)
                     println("\n Interaction: $(typeof(interaction)) | Type: $type | Incoming particle: $(get_type(particles[i])) | Outgoing particle: $(get_type(particles[j]))")
-                    @time Σsli, Σti, Σai, Σei, Σci, Sbi, Si, Ti = multigroup(Z[n],ωz[n],ρ[n],state_of_matter[n],Eᵇ[i],Eᵇ[j],L,interaction,type,particles[i],particles[j],particles,interactions,I_eff[n],A[n],atpercentA[n],S_user[n])
+                    @time Σsli, Σti, Σai, Σei, Σci, Sbi, Si, Ti = multigroup(Z[n],ωz[n],ρ[n],state_of_matter[n],Eᵇ[i],Eᵇ[j],L,interaction,type,particles[i],particles[j],particles,interactions,I_eff[n],A[n],atpercentA[n],S_user[n],is_opensn_csda)
                     Σsl .+= Σsli; Σt .+= Σti; Σa .+= Σai; Σe .+= Σei; Σc .+= Σci; Sb .+= Sbi; S .+= Si; T .+= Ti;
                 end
             end

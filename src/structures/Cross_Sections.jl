@@ -25,6 +25,8 @@ Structure used to define the parameters to extract or build a multigroup cross-s
 - ** if `source = "custom"`**
     - `custom_absorption::Vector{Real}` : absorption cross-sections per material.
     - `custom_scattering::Vector{Real}` : scattering (isotropic) cross-sections per material.
+- `is_opensn_csda::Bool = false` : produce a library for the OpenSn continuous slowing-down
+  approximation (see `set_opensn_csda`).
 
 """
 mutable struct Cross_Sections
@@ -47,6 +49,7 @@ mutable struct Cross_Sections
     is_build                  ::Bool
     custom_absorption         ::Vector{Real}
     custom_scattering         ::Vector{Real}
+    is_opensn_csda            ::Bool
 
     # Constructor(s)
     function Cross_Sections()
@@ -67,6 +70,7 @@ mutable struct Cross_Sections
         this.legendre_order = missing
         this.is_build = false
         this.multigroup_cross_sections = missing
+        this.is_opensn_csda = false
 
         return this
     end
@@ -177,10 +181,65 @@ function write(this::Cross_Sections,file::String,format::String="fmac-m",binary:
     if lowercase(format) == "fmac-m"
         write_fmac_m(this,file)
     elseif lowercase(format) == "matxs"
+        if this.is_opensn_csda error("OpenSn CSDA libraries can only be written in the FMAC-M format.") end
         write_matxs(this,file,binary)
     else
         error("Unknown cross-sections output format: $format.")
     end
+end
+
+"""
+    set_opensn_csda(this::Cross_Sections,is_opensn_csda::Bool)
+
+To produce a library for the OpenSn continuous slowing-down approximation (CSDA). OpenSn
+transports charged particles with the Boltzmann operator and a continuous slowing-down operator
+only, and it computes the continuous slowing-down contributions to energy and charge deposition
+itself. When enabled:
+- the restricted momentum transfer is not computed and the elastic cross sections are not
+  decomposed into angular Fokker-Planck components, so angular deflection by soft collisions
+  is neglected and elastic scattering is treated with the Boltzmann operator,
+- the restricted stopping power is computed as usual,
+- the energy and charge deposition cross sections contain only the contributions of
+  catastrophic interactions. The continuous slowing-down contributions within each group and at
+  the cutoff energy are excluded,
+- the FMAC-M file contains an additional record (Record III + 39) with the group-averaged
+  restricted stopping powers.
+
+The `FP` scattering model is rejected in this mode. Radiant energy and charge deposition
+calculations cannot use a library produced in this mode.
+
+# Input Argument(s)
+- `this::Cross_Sections` : cross-sections library.
+- `is_opensn_csda::Bool` : enable (true) or not (false) the OpenSn CSDA library mode.
+
+# Output Argument(s)
+N/A
+
+# Examples
+```jldoctest
+julia> cs = Cross_Sections()
+julia> cs.set_opensn_csda(true)
+```
+"""
+function set_opensn_csda(this::Cross_Sections,is_opensn_csda::Bool)
+    this.is_opensn_csda = is_opensn_csda
+    this.is_build = false
+end
+
+"""
+    get_opensn_csda(this::Cross_Sections)
+
+Indicate if the library is produced for the OpenSn continuous slowing-down approximation.
+
+# Input Argument(s)
+- `this::Cross_Sections` : cross-sections library.
+
+# Output Argument(s)
+- `is_opensn_csda::Bool` : true if the library is in the OpenSn CSDA mode.
+
+"""
+function get_opensn_csda(this::Cross_Sections)
+    return this.is_opensn_csda
 end
 
 """

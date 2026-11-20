@@ -40,7 +40,8 @@ open(fmac_file,"w") do file
     v1[1] = sum(cross_sections.get_number_of_groups())  # Cumulative number of groups
     v1[2] = cross_sections.get_number_of_particles()    # Number of particles
     v1[15] = cross_sections.get_number_of_materials()   # Number of materials
-    v1[17] = 38                                         # Number of parameters in Record II + 2
+    is_opensn_csda = cross_sections.get_opensn_csda()
+    v1[17] = is_opensn_csda ? 39 : 38                   # Number of parameters in Record II + 2
     v1[20] = cross_sections.get_legendre_order() + 1    # Legendre order + 1
     print_int(file,v1)
 
@@ -48,7 +49,7 @@ open(fmac_file,"w") do file
     # Record II + 2 : Control integer that define the length of each Record III + i
     #----
     Nmat = v1[15]
-    v2 = zeros(Int64,38)
+    v2 = zeros(Int64,v1[17])
     v2[1] = 12                       # Information text
     v2[2] = v1[2]                    # Number of energy groups per particle type
     v2[3] = v1[2]                    # Particle names
@@ -58,6 +59,9 @@ open(fmac_file,"w") do file
     v2[36] = v1[1] * Nmat            # Momentum transfers
     v2[37] = v1[1] * Nmat            # Energy deposition cross-sections
     v2[38] = v1[1] * Nmat            # Charge deposition cross-sections
+    if is_opensn_csda
+        v2[39] = v1[1] * Nmat        # Group-averaged stopping powers (OpenSn CSDA extension)
+    end
     print_int(file,v2)
 
     #----
@@ -206,6 +210,24 @@ open(fmac_file,"w") do file
             end
         end
         print_float(file,charge_deposition)
+    end
+
+    #----
+    # Record III + 39 : Group-averaged restricted stopping powers (OpenSn CSDA extension)
+    #----
+    if length(v2) >= 39 && v2[39] != 0
+        Npart = v1[2]
+        Nmat = v1[15]
+        particle_names = cross_sections.get_particles()
+        group_stopping_powers = Vector{Float64}()
+        for i in range(1,Npart)
+            sp = cross_sections.get_stopping_powers(particle_names[i])
+            Ngi = size(sp,1)
+            for g in range(1,Ngi), n in range(1,Nmat)
+                append!(group_stopping_powers,sp[g,n])
+            end
+        end
+        print_float(file,group_stopping_powers)
     end
 
     #----

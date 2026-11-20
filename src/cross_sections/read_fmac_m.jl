@@ -52,6 +52,9 @@ energyDepositionCrossSections_temp = Vector{Float64}()
 energyDepositionCrossSections = Vector{Float64}()
 chargeDepositionCrossSections_temp = Vector{Float64}()
 chargeDepositionCrossSections = Vector{Float64}()
+groupStoppingPowers_temp = Vector{Float64}()
+groupStoppingPowers = Vector{Float64}()
+is_opensn_csda = false
 scatteringCrossSections = Vector{Float64}()
 
 P = []
@@ -128,6 +131,7 @@ if line_index == L_II2 + 1
     continuousScatteringCrossSections = zeros(cumulativeNumberOfGroups,numberOfMaterials)
     energyDepositionCrossSections = zeros(cumulativeNumberOfGroups,numberOfMaterials)
     chargeDepositionCrossSections = zeros(cumulativeNumberOfGroups,numberOfMaterials)
+    groupStoppingPowers = zeros(cumulativeNumberOfGroups,numberOfMaterials)
 
 end
 
@@ -250,6 +254,15 @@ elseif record_III[index_III] == 38
             chargeDepositionCrossSections[:,imat] = chargeDepositionCrossSections_temp[imat:numberOfMaterials:end]
         end
     end
+# Record III + 39 : Group-averaged restricted stopping powers (OpenSn CSDA extension)
+elseif record_III[index_III] == 39
+    is_opensn_csda = true
+    index_III, index_III_line,groupStoppingPowers_temp = read_Float!(index_III,index_III_line,L[39],line,groupStoppingPowers_temp)
+    if index_III_line == 1
+        for imat in range(1,numberOfMaterials)
+            groupStoppingPowers[:,imat] = groupStoppingPowers_temp[imat:numberOfMaterials:end]
+        end
+    end
 end
 
 # Record III + 39 : Legendre moments of scattering cross sections
@@ -335,6 +348,11 @@ for n in range(1,numberOfParticles)
         mcs.set_momentum_transfer(continuousScatteringCrossSections[index+1:index+numberOfGroups[n],imat])
 
         sp_cutoff = stoppingPowers[index+1+(n-1):index+(numberOfGroups[n]+1)+(n-1),imat][end]
+        # OpenSn CSDA libraries exclude the continuous slowing-down deposition at the cutoff.
+        if is_opensn_csda
+            sp_cutoff = 0.0
+            mcs.set_stopping_powers(groupStoppingPowers[index+1:index+numberOfGroups[n],imat])
+        end
         charge = get_charge(particles[n])
         mcs.set_energy_deposition(push!(energyDepositionCrossSections[index+1:index+numberOfGroups[n],imat],sp_cutoff*energy_boundaries[n][end]/(energy_boundaries[n][end-1]-energy_boundaries[n][end])))
         mcs.set_charge_deposition(push!(chargeDepositionCrossSections[index+1:index+numberOfGroups[n],imat],sp_cutoff*(-charge)/(energy_boundaries[n][end-1]-energy_boundaries[n][end])))
@@ -367,6 +385,7 @@ for n in range(1,numberOfParticles)
 
 end
 
+cross_sections.set_opensn_csda(is_opensn_csda)
 cross_sections.set_energy(energy)
 cross_sections.set_cutoff(cutoff)
 cross_sections.set_number_of_groups(numberOfGroups)

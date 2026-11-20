@@ -25,6 +25,8 @@ Calculate and extract the charge deposition.
 """
 function charge_deposition(cross_sections::Cross_Sections,geometry::Geometry,solvers::Solvers,sources::Fixed_Sources,flux::Flux,particles::Vector{<:Particle})
 
+if cross_sections.get_opensn_csda() error("The cross sections exclude the continuous slowing-down contributions to charge deposition (OpenSn CSDA library). Radiant cannot compute charge deposition with them.") end
+
 #----
 # Extract geometry data
 #----

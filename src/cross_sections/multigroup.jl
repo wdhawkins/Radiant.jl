@@ -26,6 +26,9 @@ Produce the multigroup macroscopic cross sections.
 - `S_user::Dict{Type,String}` : per-particle user-supplied stopping-power tables.
 - `A::Union{Nothing,Vector{Vector{Int64}}}` : isotope mass numbers per element.
 - `atpercentA::Union{Nothing,Vector{Vector{Float64}}}` : isotope atomic fractions per element.
+- `is_opensn_csda::Bool` : produce cross sections for the OpenSn continuous slowing-down
+  approximation, without momentum transfer and without continuous slowing-down contributions
+  to the energy and charge deposition cross sections.
 
 # Output Argument(s)
 - `Σsl::Array{Float64,3}`: Legendre moments of the differential cross section [in cm⁻¹].
@@ -44,7 +47,7 @@ Produce the multigroup macroscopic cross sections.
   cross-sections for the Boltzmann Fokker-Planck equation.
 
 """
-function multigroup(Z::Vector{Int64},ωz::Vector{Float64},ρ::Float64,state_of_matter::String,Eiᵇ::Vector{Float64},Efᵇ::Vector{Float64},L::Int64,interaction::Interaction,full_type::String,incoming_particle::Particle,scattered_particle::Particle,particles::Vector{Particle},interactions::Vector{Interaction},I_eff::Float64=NaN,A::Union{Nothing,Vector{Vector{Int64}}}=nothing,atpercentA::Union{Nothing,Vector{Vector{Float64}}}=nothing,S_user::Dict{Type,String}=Dict{Type,String}())
+function multigroup(Z::Vector{Int64},ωz::Vector{Float64},ρ::Float64,state_of_matter::String,Eiᵇ::Vector{Float64},Efᵇ::Vector{Float64},L::Int64,interaction::Interaction,full_type::String,incoming_particle::Particle,scattered_particle::Particle,particles::Vector{Particle},interactions::Vector{Interaction},I_eff::Float64=NaN,A::Union{Nothing,Vector{Vector{Int64}}}=nothing,atpercentA::Union{Nothing,Vector{Vector{Float64}}}=nothing,S_user::Dict{Type,String}=Dict{Type,String}(),is_opensn_csda::Bool=false)
 
 #----
 # Initialization
@@ -60,6 +63,11 @@ charge_out = scattered_particle.get_charge()
 q_deposited, q_extracted = get_charge_variation(interaction,full_type,charge_in,charge_out)
 type = string(full_type[1])
 scattering_model, is_CSD, is_AFP, is_AFP_decomposition, is_ETC = interaction.get_scattering_model()
+if is_opensn_csda
+    if scattering_model == "FP" error("The FP scattering model of $(typeof(interaction)) cannot be used for an OpenSn CSDA library. Use the BFP or BTE scattering model.") end
+    is_AFP = false
+    is_AFP_decomposition = false
+end
 is_elastic = is_elastic_scattering(interaction)
 ΔQ = get_mass_energy_variation(interaction,type,false)
 is_subshells = interaction.get_is_subshells_dependant()
@@ -151,7 +159,9 @@ for gi in range(1,Ngi)
     end
 
     # Energy deposition cross sections
-    Σe[gi] = Σtₑ[gi] - sum(Σsₑ[gi,:]) + S[gi]
+    # OpenSn computes the continuous slowing-down contribution from the stopping power itself.
+    Σe[gi] = Σtₑ[gi] - sum(Σsₑ[gi,:])
+    if ~is_opensn_csda Σe[gi] += S[gi] end
 
     # Charge deposition cross sections
     Σc[gi] = Σt[gi] * q_deposited - sum(Σsl[gi,:,1]) * q_extracted
@@ -168,7 +178,7 @@ for gi in range(1,Ngi)
 end
 
 # Contributions of particle slowing-down to the cutoff energy to the energy and charge deposition
-if type ∈ ["S","A"]
+if type ∈ ["S","A"] && ~is_opensn_csda
     Σe[Ngi+1] = Sb[Ngi+1] * E_in[end]/(E_in[end-1]-E_in[end])
     Σc[Ngi+1] = Sb[Ngi+1] * (-charge_in)/(E_in[end-1]-E_in[end])
 end

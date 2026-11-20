@@ -168,6 +168,33 @@ cs.write("./library.matxs","matxs")      # MATXS, BCD/ASCII encoding
 cs.write("./library.matxs","matxs",true) # MATXS, binary encoding
 ```
 
+### Libraries for the OpenSn continuous slowing-down approximation
+
+OpenSn transports electrons and positrons with the Boltzmann operator and a continuous
+slowing-down operator, without an angular Fokker-Planck operator. It also computes the continuous
+slowing-down contributions to energy and charge deposition from the stopping power. To produce a
+library for it, use the `BFP` scattering model and enable the OpenSn CSDA mode before building:
+
+```julia
+cs.set_opensn_csda(true)
+cs.write("./library_opensn.txt")
+```
+
+In this mode Radiant:
+
+- computes the restricted stopping power as usual,
+- does not compute the restricted momentum transfer or decompose the elastic cross sections, so
+  soft collisions slow particles down without deflecting them and elastic scattering is treated
+  with the Boltzmann operator,
+- excludes the continuous slowing-down contributions from the energy and charge deposition cross
+  sections, within each group and at the cutoff energy,
+- writes the group-averaged restricted stopping powers in an additional FMAC-M record
+  (Record III + 39).
+
+The `FP` scattering model is rejected in this mode. Only the FMAC-M format is supported, and
+Radiant's own energy and charge deposition calculations refuse such a library. Reading the file
+back with `set_source("fmac-m")` restores the mode.
+
 ## 4.5 Reading and Writing MATXS Files
 
 Radiant can also read and write the [MATXS](@ref "The MATXS File Format") format — the
@@ -244,6 +271,7 @@ w = cs.get_material("water")
 | `set_absorption(Σa)`, `set_scattering(Σs)`        | Set custom cross-sections.                                   |
 | `build()`                                         | Build the multigroup transfer matrices.                      |
 | `write(path[,format[,binary]])`                   | Write the library; `format` is `"fmac-m"` (default) or `"matxs"`. |
+| `set_opensn_csda(true)`                           | Produce a library for the OpenSn CSDA (see 4.4).             |
 | `get_energies(p)`, `get_energy_boundaries(p)`, `get_energy_width(p)` | Query the energy structure for particle `p`.              |
 | `get_total(p)`, `get_absorption(p)`               | Get total / absorption cross-sections.                       |
 | `get_scattering(pin,pout,L)`                      | Legendre moments of the scattering matrix.                   |

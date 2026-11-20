@@ -23,6 +23,8 @@ Calculate and extract the energy deposition.
 """
 function energy_deposition(cross_sections::Cross_Sections,geometry::Geometry,solvers::Solvers,sources::Fixed_Sources,flux::Flux,particles::Vector{<:Particle})
 
+if cross_sections.get_opensn_csda() error("The cross sections exclude the continuous slowing-down contributions to energy deposition (OpenSn CSDA library). Radiant cannot compute energy deposition with them.") end
+
 #----
 # Extract geometry data
 #----
